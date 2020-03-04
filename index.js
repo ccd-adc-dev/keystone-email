@@ -4,6 +4,7 @@ const { Text, Checkbox, Password } = require('@keystonejs/fields');
 const { GraphQLApp } = require('@keystonejs/app-graphql');
 const { AdminUIApp } = require('@keystonejs/app-admin-ui');
 const initialiseData = require('./initial-data');
+const sendMail = require('./mail');
 
 const { MongooseAdapter: Adapter } = require('@keystonejs/adapter-mongoose');
 
@@ -31,6 +32,19 @@ const userIsAdminOrOwner = auth => {
 };
 const access = { userIsAdmin, userOwnsItem, userIsAdminOrOwner };
 
+const afterUserChange = async ({
+  operation,
+  existingItem,
+  originalInput,
+  updatedItem,
+  context,
+  actions,
+}) => {
+  if (operation == 'create') {
+    sendMail(originalInput.email)
+  }
+}
+
 keystone.createList('User', {
   fields: {
     name: { type: Text },
@@ -50,7 +64,12 @@ keystone.createList('User', {
     delete: access.userIsAdmin,
     auth: true,
   },
+  hooks: {
+    afterChange: afterUserChange
+  }
 });
+
+
 
 const authStrategy = keystone.createAuthStrategy({
   type: PasswordAuthStrategy,
